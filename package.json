@@ -1,0 +1,14 @@
+{
+  "name": "pas-cordova",
+  "version": "0.0.1",
+  "description": "pas cordova plugin",
+  "main": "lib/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Ganesha <reekoheek@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "fsmonitor": "^0.2.4"
+  }
+}
