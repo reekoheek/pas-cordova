@@ -48,10 +48,22 @@ module.exports = function() {
         reporter.print('log', 'Start watching ...');
 
         var platformMap,
-            platforms;
+            platforms,
+            platformsJson = path.join('./platforms/platforms.json');
 
-        platformMap = JSON.parse(fs.readFileSync(path.join('./platforms/platforms.json')));
-        platforms = Object.keys(platformMap);
+
+        if (fs.existsSync(platformsJson)) {
+            platformMap = JSON.parse(fs.readFileSync(platformsJson));
+            platforms = Object.keys(platformMap);
+        } else {
+            platforms = [];
+            var files = fs.readdirSync('./platforms');
+            files.forEach(function(file) {
+                if (fs.lstatSync(path.join('./platforms', file)).isDirectory()) {
+                    platforms.push(file);
+                }
+            });
+        }
 
         var watchedDir = './www';
         var monitor = fsmonitor.watch(watchedDir, {
