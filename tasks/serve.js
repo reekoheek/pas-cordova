@@ -2,7 +2,8 @@ var http = require('http'),
     path = require('path'),
     fs = require('fs'),
     os = require('os'),
-    fsmonitor = require('fsmonitor');
+    fsmonitor = require('fsmonitor'),
+    mime = require('mime');
 
 var get = function(manifest, key) {
     'use strict';
@@ -43,8 +44,6 @@ module.exports = function() {
         }
 
         var server = http.createServer(function(req, res) {
-            console.log(req.method, req.url);
-
             var platform = 'ios';
             if (req.headers['user-agent'].match(/android/i)) {
                 platform = 'android';
@@ -54,20 +53,38 @@ module.exports = function() {
                 prefixPath = path.join('./platforms', platform,'assets/www'),
                 filePath = path.join(prefixPath, uri);
 
-            if (!fs.existsSync(filePath) || fs.lstatSync(filePath).isDirectory()) {
-                filePath = path.join(filePath, 'index.html');
-            }
+            var checkFile = function(filePath) {
+                return new Promise(function(resolve, reject) {
+                    fs.lstat(filePath, function(err, stat) {
+                        if (err) {
+                            return reject(err);
+                        }
 
-            if (!fs.existsSync(filePath) || fs.lstatSync(filePath).isDirectory()) {
-                console.log(req.method, req.url, 'Not found');
-                res.writeHead(404);
-                res.end('Not found');
-                return;
-            }
+                        if (stat.isDirectory()) {
+                            reject(new Error('Not file'));
+                        } else {
+                            resolve(filePath);
+                        }
+                    });
+                });
+            };
 
-            var content = fs.readFileSync(filePath);
-            res.write(content);
-            res.end();
+            checkFile(filePath)
+                .then(function() {}, function() {
+                    filePath = path.join(filePath, 'index.html');
+                    return checkFile(filePath);
+                }).then(function() {
+                    console.log('OK', req.method, req.url);
+                    var mtype = mime.lookup(filePath);
+                    res.writeHead(200, {
+                        'Content-Type': mtype
+                    });
+                    fs.createReadStream(filePath).pipe(res);
+                }, function() {
+                    console.log('NF', req.method, req.url);
+                    res.writeHead(404);
+                    res.end('Not found');
+                });
         });
 
         server.listen(port, host, function() {
@@ -79,7 +96,6 @@ module.exports = function() {
         var platformMap,
             platforms,
             platformsJson = path.join('./platforms/platforms.json');
-
 
         if (fs.existsSync(platformsJson)) {
             platformMap = JSON.parse(fs.readFileSync(platformsJson));
