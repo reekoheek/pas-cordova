@@ -1,7 +1,20 @@
 var http = require('http'),
     path = require('path'),
     fs = require('fs'),
+    os = require('os'),
     fsmonitor = require('fsmonitor');
+
+var get = function(manifest, key) {
+    'use strict';
+
+    if (manifest.cordova && manifest.cordova.vars && manifest.cordova.vars[key]) {
+        return manifest.cordova.vars[key];
+    }
+
+    if (key !== 'name') {
+        return manifest[key];
+    }
+};
 
 module.exports = function() {
     'use strict';
@@ -11,8 +24,24 @@ module.exports = function() {
     reporter.print('log', 'Serving www resources');
 
     var manifest = this.require('manifest')();
-    if (manifest.cordova && manifest.cordova.serve) {
-        var serve = manifest.cordova.serve;
+    if (get(manifest, 'serve')) {
+        var host = get(manifest, 'host'),
+            port = get(manifest, 'port') || 3000;
+
+        if (!host) {
+            var ifaces = os.networkInterfaces();
+            var iface;
+            Object.keys(ifaces).some(function(key) {
+                return ifaces[key].some(function(i) {
+                    if (i.family === 'IPv4' && i.internal === false) {
+                        iface = i.address;
+                        return true;
+                    }
+                });
+            });
+            host = iface;
+        }
+
         var server = http.createServer(function(req, res) {
             console.log(req.method, req.url);
 
@@ -41,8 +70,8 @@ module.exports = function() {
             res.end();
         });
 
-        server.listen(serve.port, serve.host, function() {
-            reporter.print('log', 'Listening on %s:%s', serve.host, serve.port);
+        server.listen(port, host, function() {
+            reporter.print('log', 'Listening on %s:%s', host, port);
         });
 
         reporter.print('log', 'Start watching ...');

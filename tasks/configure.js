@@ -1,12 +1,15 @@
-var fs = require('fs');
+var fs = require('fs'),
+    os = require('os');
 
 var get = function(manifest, key) {
+    'use strict';
+
     if (manifest.cordova && manifest.cordova.vars && manifest.cordova.vars[key]) {
         return manifest.cordova.vars[key];
     }
 
     if (key !== 'name') {
-        return manifest[key] || 'unknown';
+        return manifest[key];
     }
 };
 
@@ -57,7 +60,28 @@ module.exports = function() {
 
     this.reporter.print('log', 'Configuring cordova app');
 
+    var content = get(manifest, 'content');
+    if (!content) {
+        var host = get(manifest, 'host'),
+            port = get(manifest, 'port') || 3000;
+
+        if (!host) {
+            var ifaces = os.networkInterfaces();
+            var iface;
+            Object.keys(ifaces).some(function(key) {
+                return ifaces[key].some(function(i) {
+                    if (i.family === 'IPv4' && i.internal === false) {
+                        iface = i.address;
+                        return true;
+                    }
+                });
+            });
+            host = iface;
+        }
+        content = 'http://' + host + ':' + port;
+    }
+
     configXml.set('name', get(manifest, 'name'));
-    configXml.set('content', get(manifest, 'content'));
+    configXml.set('content', content);
     configXml.save();
 };

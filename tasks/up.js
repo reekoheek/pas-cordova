@@ -1,6 +1,6 @@
 var spawn = require('child_process').spawn;
 
-module.exports = function() {
+module.exports = function(platform) {
     'use strict';
 
     var task = this.require('task'),
@@ -12,8 +12,13 @@ module.exports = function() {
         return new Promise(function(resolve, reject) {
 
             reporter.print('log', 'Running mobile app');
+            var args = ['run'];
 
-            var exe = spawn('cordova', ['run'], {'stdio': 'inherit'});
+            if (platform) {
+                args.push(platform);
+            }
+
+            var exe = spawn('cordova', args, {'stdio': 'inherit'});
 
             exe.on('exit', function() {
                 resolve();
