@@ -29,7 +29,8 @@ module.exports = {
     pull: function() {
         'use strict';
 
-        return Promise.resolve();
         // noop
+
+        return Promise.resolve();
     }
 };
