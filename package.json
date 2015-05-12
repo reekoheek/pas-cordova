@@ -9,6 +9,7 @@
   "author": "Ganesha <reekoheek@gmail.com>",
   "license": "MIT",
   "dependencies": {
+    "browser-sync": "^2.7.1",
     "fsmonitor": "^0.2.4",
     "mime": "^1.3.4"
   }

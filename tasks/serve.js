@@ -25,73 +25,24 @@ module.exports = function() {
     reporter.print('log', 'Serving www resources');
 
     var manifest = this.require('manifest')();
+
     if (get(manifest, 'serve')) {
         var host = get(manifest, 'host'),
             port = get(manifest, 'port') || 3000;
 
-        if (!host) {
-            var ifaces = os.networkInterfaces();
-            var iface;
-            Object.keys(ifaces).some(function(key) {
-                return ifaces[key].some(function(i) {
-                    if (i.family === 'IPv4' && i.internal === false) {
-                        iface = i.address;
-                        return true;
-                    }
-                });
-            });
-            host = iface;
-        }
-
-        var server = http.createServer(function(req, res) {
-            var platform = 'ios';
-            if (req.headers['user-agent'].match(/android/i)) {
-                platform = 'android';
-            }
-
-            var uri = req.url,
-                prefixPath = path.join('./platforms', platform,'assets/www'),
-                filePath = path.join(prefixPath, uri);
-
-            var checkFile = function(filePath) {
-                return new Promise(function(resolve, reject) {
-                    fs.lstat(filePath, function(err, stat) {
-                        if (err) {
-                            return reject(err);
-                        }
-
-                        if (stat.isDirectory()) {
-                            reject(new Error('Not file'));
-                        } else {
-                            resolve(filePath);
-                        }
-                    });
-                });
-            };
-
-            checkFile(filePath)
-                .then(function() {}, function() {
-                    filePath = path.join(filePath, 'index.html');
-                    return checkFile(filePath);
-                }).then(function() {
-                    console.log('OK', req.method, req.url);
-                    var mtype = mime.lookup(filePath);
-                    res.writeHead(200, {
-                        'Content-Type': mtype
-                    });
-                    fs.createReadStream(filePath).pipe(res);
-                }, function() {
-                    console.log('NF', req.method, req.url);
-                    res.writeHead(404);
-                    res.end('Not found');
-                });
-        });
-
-        server.listen(port, host, function() {
-            reporter.print('log', 'Listening on %s:%s', host, port);
-        });
-
-        reporter.print('log', 'Start watching ...');
+        // if (!host) {
+        //     var ifaces = os.networkInterfaces();
+        //     var iface;
+        //     Object.keys(ifaces).some(function(key) {
+        //         return ifaces[key].some(function(i) {
+        //             if (i.family === 'IPv4' && i.internal === false) {
+        //                 iface = i.address;
+        //                 return true;
+        //             }
+        //         });
+        //     });
+        //     host = iface;
+        // }
 
         var platformMap,
             platforms,
@@ -109,6 +60,118 @@ module.exports = function() {
                 }
             });
         }
+
+        var browserSync = require('browser-sync').create();
+        browserSync.init({
+            online: false,
+            xip: false,
+            reloadOnRestart: true,
+            notify: false,
+            open: false,
+            port: port,
+            // files: ['./platforms/**/*'],
+            // proxy: 'localhost:' + localPort
+            server: {
+                baseDir: ['./www'],
+                middleware: function(req, res, next) {
+                    var platform = 'ios';
+                    if (req.headers['user-agent'].match(/android/i)) {
+                        platform = 'android';
+                    }
+
+                    var uri = req.url,
+                        prefixPath = path.join('./platforms', platform,'assets/www'),
+                        filePath = path.join(prefixPath, uri);
+
+                    var checkFile = function(filePath) {
+                        return new Promise(function(resolve, reject) {
+                            fs.lstat(filePath, function(err, stat) {
+                                if (err) {
+                                    return reject(err);
+                                }
+
+                                if (stat.isDirectory()) {
+                                    reject(new Error('Not file'));
+                                } else {
+                                    resolve(filePath);
+                                }
+                            });
+                        });
+                    };
+
+                    checkFile(filePath)
+                        .then(function() {}, function() {
+                            filePath = path.join(filePath, 'index.html');
+                            return checkFile(filePath);
+                        }).then(function() {
+                            console.log('OK', req.method, req.url);
+                            var mtype = mime.lookup(filePath);
+                            res.writeHead(200, {
+                                'Content-Type': mtype
+                            });
+                            fs.createReadStream(filePath).pipe(res);
+                        }, function(e) {
+                            console.log('NX', e.message);
+                            next();
+                        });
+                }
+            }
+        }, function(err, bs) {
+            if (err) {
+                throw err;
+            }
+            reporter.print('log', 'Start watching ...');
+        });
+
+        // var server = http.createServer(function(req, res) {
+        //     var platform = 'ios';
+        //     if (req.headers['user-agent'].match(/android/i)) {
+        //         platform = 'android';
+        //     }
+
+        //     var uri = req.url,
+        //         prefixPath = path.join('./platforms', platform,'assets/www'),
+        //         filePath = path.join(prefixPath, uri);
+
+        //     var checkFile = function(filePath) {
+        //         return new Promise(function(resolve, reject) {
+        //             fs.lstat(filePath, function(err, stat) {
+        //                 if (err) {
+        //                     return reject(err);
+        //                 }
+
+        //                 if (stat.isDirectory()) {
+        //                     reject(new Error('Not file'));
+        //                 } else {
+        //                     resolve(filePath);
+        //                 }
+        //             });
+        //         });
+        //     };
+
+        //     checkFile(filePath)
+        //         .then(function() {}, function() {
+        //             filePath = path.join(filePath, 'index.html');
+        //             return checkFile(filePath);
+        //         }).then(function() {
+        //             console.log('OK', req.method, req.url);
+        //             var mtype = mime.lookup(filePath);
+        //             res.writeHead(200, {
+        //                 'Content-Type': mtype
+        //             });
+        //             fs.createReadStream(filePath).pipe(res);
+        //         }, function() {
+        //             console.log('NF', req.method, req.url);
+        //             res.writeHead(404);
+        //             res.end('Not found');
+        //         });
+        // });
+
+        // server.listen(function() {
+        //     var localPort = server.address().port;
+        //     //
+        //     // reporter.print('log', 'Listening on %s:%s', host, port);
+        // });
 
         var watchedDir = './www';
         var monitor = fsmonitor.watch(watchedDir, {
@@ -132,22 +195,38 @@ module.exports = function() {
             //   modifiedFolders: [],
             //   removedFolders: [] }
 
+            var promises = [],
+                changedMap = {};
+
+            var onChange = function(file, platform) {
+                promises.push(new Promise(function(resolve, reject) {
+                    var from = path.join(watchedDir, file),
+                        to = path.join('./platforms', platform, 'assets/www', file),
+                        toStream = fs.createWriteStream(to);
+                    toStream.on('close', function() {
+                        changedMap[file] = file;
+                        resolve();
+                    });
+                    fs.createReadStream(from).pipe(toStream);
+                }));
+            };
+
             changes.addedFiles.forEach(function(file) {
                 console.log('- [A]', file);
                 platforms.forEach(function(platform) {
-                    var from = path.join(watchedDir, file),
-                        to = path.join('./platforms', platform, 'assets/www', file);
-                    fs.createReadStream(from).pipe(fs.createWriteStream(to));
+                    onChange(file, platform);
                 });
             });
 
             changes.modifiedFiles.forEach(function(file) {
                 console.log('- [M]', file);
                 platforms.forEach(function(platform) {
-                    var from = path.join(watchedDir, file),
-                        to = path.join('./platforms', platform, 'assets/www', file);
-                    fs.createReadStream(from).pipe(fs.createWriteStream(to));
+                    onChange(file, platform);
                 });
+            });
+
+            Promise.all(promises).then(function() {
+                browserSync.reload(Object.keys(changedMap));
             });
         });
     }
