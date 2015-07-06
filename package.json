@@ -1,6 +1,6 @@
 {
   "name": "pas-cordova",
-  "version": "0.1.1",
+  "version": "3.0.0",
   "description": "pas cordova plugin",
   "main": "lib/index.js",
   "scripts": {
@@ -11,6 +11,7 @@
   "dependencies": {
     "browser-sync": "^2.7.1",
     "fsmonitor": "^0.2.4",
-    "mime": "^1.3.4"
+    "mime": "^1.3.4",
+    "xml2js": "^0.4.9"
   }
 }

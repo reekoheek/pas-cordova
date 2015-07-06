@@ -1,87 +1,35 @@
-var fs = require('fs'),
-    os = require('os');
-
-var get = function(manifest, key) {
-    'use strict';
-
-    if (manifest.cordova && manifest.cordova.vars && manifest.cordova.vars[key]) {
-        return manifest.cordova.vars[key];
-    }
-
-    if (key !== 'name') {
-        return manifest[key];
-    }
-};
-
-var ConfigXML = function(task, filename) {
-    'use strict';
-
-    this.reporter = task.reporter;
-
-    this.filename = filename || './config.xml';
-
-    this.originalContent = this.content = fs.readFileSync(this.filename, 'utf8');
-};
-
-ConfigXML.prototype.set = function(key, value) {
-    'use strict';
-
-    this.reporter.print('log', 'set %s=%s', key, value);
-    switch(key) {
-        case 'name':
-            this.content = this.content.replace(/<name>[^<]*<\/name>/, '<name>' + value + '</name>');
-            break;
-        case 'content':
-            this.content = this.content.replace(/<content\s+src="[^"]*"\s*\/>/, '<content src="' + value + '" />');
-            break;
-        case 'id':
-            this.content = this.content.replace(/<widget id="[^"]*"/, '<widget id="' + value + '"');
-            break;
-        default:
-            throw new Error('Unimplemented yet for ' + key);
-    }
-};
-
-ConfigXML.prototype.save = function() {
-    'use strict';
-
-    if (this.originalContent === this.content) {
-        return;
-    }
-    fs.writeFileSync(this.filename, this.content);
-};
-
+/**
+ *
+ * Copyright (c) 2015 Xinix Technology
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ */
 
 module.exports = function() {
     'use strict';
 
-    var manifest = this.require('manifest')(),
-        configXml = new ConfigXML(this, './config.xml');
+    var pack = this.query();
+    return pack.fetch()
+        .then(function(pack) {
+            this.i('cordova', 'Configuring cordova app');
 
-    this.reporter.print('log', 'Configuring cordova app');
-
-    var content = get(manifest, 'content');
-    if (!content) {
-        var host = get(manifest, 'host'),
-            port = get(manifest, 'port') || 3000;
-
-        if (!host) {
-            var ifaces = os.networkInterfaces();
-            var iface;
-            Object.keys(ifaces).some(function(key) {
-                return ifaces[key].some(function(i) {
-                    if (i.family === 'IPv4' && i.internal === false) {
-                        iface = i.address;
-                        return true;
-                    }
-                });
-            });
-            host = iface;
-        }
-        content = 'http://' + host + ':' + port;
-    }
-
-    configXml.set('name', get(manifest, 'name'));
-    configXml.set('content', content);
-    configXml.save();
+            return pack.profile.cordovaConfigure(pack);
+        }.bind(this));
 };
+

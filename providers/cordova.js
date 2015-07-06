@@ -1,36 +1,36 @@
 module.exports = {
-    support: function(uri) {
+    support: function(pack) {
         'use strict';
 
-        if (uri.match(/^cordova:/)) {
+        if (pack.queryUrl.match(/^cordova:/)) {
             return true;
         }
     },
 
-    normalizeUrl: function(uri) {
-        'use strict';
+    // normalizeUrl: function(uri) {
+    //     'use strict';
 
-        return uri;
-    },
+    //     return uri;
+    // },
 
-    fetchIndices: function() {
-        'use strict';
+    // fetchIndices: function() {
+    //     'use strict';
 
-        return Promise.resolve({
-            devs: {
-                master: {
-                    name: 'master',
-                    type: 'dev'
-                }
-            }
-        });
-    },
+    //     return Promise.resolve({
+    //         devs: {
+    //             master: {
+    //                 name: 'master',
+    //                 type: 'dev'
+    //             }
+    //         }
+    //     });
+    // },
 
-    pull: function() {
-        'use strict';
+    // pull: function() {
+    //     'use strict';
 
-        // noop
+    //     // noop
 
-        return Promise.resolve();
-    }
+    //     return Promise.resolve();
+    // }
 };
