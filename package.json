@@ -1,6 +1,6 @@
 {
   "name": "pas-cordova",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "pas cordova plugin",
   "main": "lib/index.js",
   "scripts": {
