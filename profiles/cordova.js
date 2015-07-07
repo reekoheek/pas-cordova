@@ -169,13 +169,21 @@ module.exports = {
 
             return saveConfigXML(pack, {
                 name: pack.cordova.name || pack.cordova.widget.name || 'Cordova App',
-                content: 'http://' + host + ':' + port + '/'
+                content: [{
+                    '$': {
+                        src: 'http://' + host + ':' + port + '/'
+                    }
+                }]
             });
 
         } else {
             return saveConfigXML(pack, {
                 name: pack.cordova.name || pack.cordova.widget.name || 'Cordova App',
-                content: pack.cordova.content || 'index.html'
+                content: [{
+                    '$': {
+                        src: pack.cordova.content || 'index.html'
+                    }
+                }]
             });
         }
     },
