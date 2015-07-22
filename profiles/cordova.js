@@ -79,40 +79,68 @@ module.exports = {
     },
 
     install: function(pack) {
-        // console.log('>>', pack);
-        return new Promise(function(resolve, reject) {
+        var platforms = ['android'];
+        if (pack.cordova && pack.cordova.platforms) {
+            platforms = pack.cordova.platforms.slice(0);
+        }
 
-            var dependencies = pack.dependencies;
+        var promises = [];
 
-            var promise = Promise.resolve();
+        platforms.forEach(function(platform) {
+            if (!fs.existsSync(path.join(pack.cachePath, 'platforms', platform))) {
 
-            Object.keys(dependencies).forEach(function(i) {
-                var dependency = i.split('cordova:').slice(1).join('cordova:');
-                if (!dependency) {
-                    throw new Error('Invalid dependency "' + i + '"');
-                }
+                promises.push(new Promise(function(resolve, reject) {
+                    this.i('cordova', 'Add platform %s', platform);
 
-                if (fs.existsSync(path.join(pack.cachePath, 'plugins', dependency))) {
-                    this.i('cordova', 'Plugin %s already installed', dependency);
-                } else {
-                    promise = promise.then(function() {
-                        var addPlugin = spawn('cordova', ['plugin', 'add', dependency], {stdio: 'inherit'});
+                    var exe = spawn('cordova', ['platform', 'add', platform], {stdio: 'inherit'});
 
-                        return new Promise(function(resolve, reject) {
-                            addPlugin.on('close', function(statusCode) {
-                                if (statusCode === 0) {
-                                    resolve();
-                                } else {
-                                    reject(new Error('Exit with error: ' + statusCode));
-                                }
-                            });
-                        });
+                    exe.on('exit', function(exitCode) {
+                        if (exitCode === 0) {
+                            resolve();
+                        } else {
+                            reject(new Error('Exit with code: ' + exitCode));
+                        }
                     });
-                }
-            }.bind(this));
-
-            resolve(promise);
+                }.bind(this)));
+            }
         }.bind(this));
+
+        return Promise.all(promises)
+            .then(function() {
+                return new Promise(function(resolve, reject) {
+
+                    var dependencies = pack.dependencies;
+
+                    var promise = Promise.resolve();
+
+                    Object.keys(dependencies).forEach(function(i) {
+                        var dependency = i.split('cordova:').slice(1).join('cordova:');
+                        if (!dependency) {
+                            throw new Error('Invalid dependency "' + i + '"');
+                        }
+
+                        if (fs.existsSync(path.join(pack.cachePath, 'plugins', dependency))) {
+                            this.i('cordova', 'Plugin %s already installed', dependency);
+                        } else {
+                            promise = promise.then(function() {
+                                var addPlugin = spawn('cordova', ['plugin', 'add', dependency], {stdio: 'inherit'});
+
+                                return new Promise(function(resolve, reject) {
+                                    addPlugin.on('close', function(statusCode) {
+                                        if (statusCode === 0) {
+                                            resolve();
+                                        } else {
+                                            reject(new Error('Exit with error: ' + statusCode));
+                                        }
+                                    });
+                                });
+                            });
+                        }
+                    }.bind(this));
+
+                    resolve(promise);
+                }.bind(this));
+            }.bind(this));
     },
 
     up: function(pack, options) {
