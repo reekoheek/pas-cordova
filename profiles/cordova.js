@@ -352,6 +352,84 @@ module.exports = {
                 browserSync.reload(Object.keys(changedMap));
             });
         });
+    },
+
+    release: function(pack, platform) {
+        'use strict';
+
+        platform = platform || 'android';
+
+        return new Promise(function(resolve, reject) {
+            switch(platform) {
+                case 'android':
+                    var keyPassword = pack.cordova.keyPassword || '',
+                        storePassword = pack.cordova.storePassword || '';
+
+                    var propFile = path.join('platforms/android/release-signing.properties');
+                    var keyStorePath = path.join(process.env.HOME, '.keystores', pack.name, platform || 'android') + '.keystore';
+                    var fileContent = 'storeFile=' + keyStorePath + '\n';
+                    fileContent += 'storeType=\n';
+                    fileContent += 'keyAlias=playkeystore\n';
+                    fileContent += 'keyPassword=' + keyPassword + '\n';
+                    fileContent += 'storePassword=' + storePassword + '\n';
+
+                    fs.writeFileSync(propFile, fileContent);
+
+                    var executable = path.resolve('platforms/android/gradlew');
+                    var releaseBuild = spawn(executable, ['assembleRelease'], {stdio:'inherit', cwd: path.resolve('platforms/android')});
+
+                    releaseBuild.on('exit', function(statusCode) {
+                        if (statusCode === 0) {
+                            this.i('cordova', 'Built and signed apk at %s', path.resolve('platforms/android/build/outputs/apk/android-release.apk'));
+                            resolve();
+                        } else {
+                            reject(new Error('Error with status code: ' + statusCode));
+                        }
+                    }.bind(this));
+
+                    break;
+                default:
+                    throw new Error('Unimplented release for platform: ' + platform);
+            }
+        }.bind(this));
+    },
+
+    generateKeyStore: function(pack, platform) {
+        'use strict';
+
+        return new Promise(function(resolve, reject) {
+            var fsUtil = this.require('util/fs');
+            var keyStorePath = path.join(process.env.HOME, '.keystores', pack.name, platform || 'android') + '.keystore';
+
+            if (fs.existsSync(keyStorePath)) {
+                return reject(new Error('Keystore already exists at: ' + keyStorePath));
+            }
+
+            fsUtil.mkdirp(path.dirname(keyStorePath));
+            var args = [
+                '-genkey',
+                '-v',
+                '-keystore',
+                keyStorePath,
+                '-alias',
+                'playkeystore',
+                '-keyalg',
+                'RSA',
+                '-keysize',
+                '2048',
+                '-validity',
+                '20000'
+            ];
+            this.i('cordova', 'Generating keystore on %s', keyStorePath);
+            var gen = spawn('keytool', args, {stdio:'inherit'});
+            gen.on('exit', function(statusCode) {
+                if (statusCode === 0) {
+                    resolve();
+                } else {
+                    reject(new Error('Error with status code: ' + statusCode));
+                }
+            });
+        }.bind(this));
     }
 };
 
