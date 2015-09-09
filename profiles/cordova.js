@@ -219,6 +219,8 @@ module.exports = {
     cordovaServe: function(pack) {
         'use strict';
 
+        var fsUtil = this.require('util/fs');
+
         if(!pack.cordova.serve) {
             return;
         }
@@ -293,7 +295,7 @@ module.exports = {
                             });
                             fs.createReadStream(filePath).pipe(res);
                         }, function(e) {
-                            console.log('NX', e.message);
+                            // console.log('NX', e.message);
                             next();
                         });
                 }
@@ -324,12 +326,17 @@ module.exports = {
             var onChange = function(file, platform) {
                 promises.push(new Promise(function(resolve, reject) {
                     var from = path.join(watchedDir, file),
-                        to = path.join('./platforms', platform, 'assets/www', file),
-                        toStream = fs.createWriteStream(to);
+                        to = path.join('./platforms', platform, 'assets/www', file);
+
+                    fsUtil.mkdirp(path.dirname(from));
+                    fsUtil.mkdirp(path.dirname(to));
+
+                    var toStream = fs.createWriteStream(to);
                     toStream.on('close', function() {
                         changedMap[file] = file;
                         resolve();
                     });
+
                     fs.createReadStream(from).pipe(toStream);
                 }));
             };
@@ -352,6 +359,15 @@ module.exports = {
                 browserSync.reload(Object.keys(changedMap));
             });
         });
+    },
+
+    clean: function(pack) {
+        'use strict';
+
+        var fsUtil = this.require('util/fs');
+
+        fsUtil.rm(path.join(pack.cachePath, 'platforms'));
+        fsUtil.rm(path.join(pack.cachePath, 'plugins'));
     },
 
     release: function(pack, platform) {
